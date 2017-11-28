@@ -55,8 +55,10 @@
 #define IFTTT_KEY_FILENAME    "ifkey.txt"
 #define IFTTT_KEY_MAXSIZE     128
 #define STATION_SPECIAL_DATA_SIZE  (TMP_BUFFER_SIZE - 8)
-
-#define FLOWCOUNT_RT_WINDOW   30    // flow count window (for computing real-time flow rate), 30 seconds
+/*AS MODIFICATION change flow count window to 10 second*/
+#define FLOWCOUNT_RT_WINDOW   10 /*30*/ // flow count window (for computing real-time flow rate), 30 seconds
+//define time in seconds to pressure to stabilize
+#define FLOW_PRESSURE_STABILIZED_TIME 90
 
 /** Station type macro defines */
 #define STN_TYPE_STANDARD    0x00
