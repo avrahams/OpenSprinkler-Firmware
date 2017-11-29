@@ -90,6 +90,19 @@ volatile ulong flow_count = 0;
 ulong flow_gallons_count = 0;
 ulong flow_station_start_gallons = 0;
 float flow_station_gallons = 0;
+/** Flow sensor interrupt service routine */
+#ifdef ESP8266
+ICACHE_RAM_ATTR void flow_isr() // for ESP8266, ISR must be marked ICACHE_RAM_ATTR
+#else
+void flow_isr()
+#endif
+{
+  if(os.options[OPTION_SENSOR_TYPE]!=SENSOR_TYPE_FLOW) return;
+  ulong curr = millis();
+  if(curr-os.flowcount_time_ms < FLOW_DEBOUNCE_THRESHOLD) return;  // debounce rate smaller then FLOW_DEBOUNCE_THRESHOLD */
+  flow_count++;
+  os.flowcount_time_ms = curr;
+}
 
 float flow_pulses_to_gpm(float pulsesPerSec){
 	//GPM = K*(FREQUENCY + Offset)
@@ -106,20 +119,6 @@ int is_time(ulong timeSec, int hours, int minutes){
 		}
 	}
 	return 0;
-}
-
-/** Flow sensor interrupt service routine */
-#ifdef ESP8266
-ICACHE_RAM_ATTR void flow_isr() // for ESP8266, ISR must be marked ICACHE_RAM_ATTR
-#else
-void flow_isr()
-#endif
-{
-  if(os.options[OPTION_SENSOR_TYPE]!=SENSOR_TYPE_FLOW) return;
-  ulong curr = millis();
-  /**DO NOT DEBOUNCE  if(curr-os.flowcount_time_ms < 50) return;  // debounce threshold: 50ms */
-  flow_count++;
-  os.flowcount_time_ms = curr;
 }
 
 #if defined(ARDUINO)
@@ -806,9 +805,7 @@ void do_loop()
 #endif
 
     // real-time flow count
-    static ulong flowcount_rt_start = 0;
-    static float flow_gpm_rt = 0;
-    static float flow_gallons_rt = 0;
+    static ulong flowcount_rt_start = 0;    
     static int is_flowing = 0;
     static ulong flow_log_last_time = 0;
     static ulong flow_satbilized_end_time = 0;
@@ -827,9 +824,9 @@ void do_loop()
     		
     		flowcount_rt_start = flow_count;
     		//update real time gpm
-    		flow_gpm_rt = flow_pulses_to_gpm(os.flowcount_rt / FLOWCOUNT_RT_WINDOW);
+    		float flow_gpm_rt = flow_pulses_to_gpm(os.flowcount_rt / FLOWCOUNT_RT_WINDOW);
     		//update real time gallons
-    		flow_gallons_rt = (flow_gpm_rt/60) * FLOWCOUNT_RT_WINDOW;
+    		float flow_gallons_rt = (flow_gpm_rt/60) * FLOWCOUNT_RT_WINDOW;
 
     		
     		//update real time gallons
@@ -838,12 +835,9 @@ void do_loop()
     			flow_gallons_count += (ulong)(flow_gallons_rt * 100);
     		}
 
-    		//re/start flow log if not started
-    		if(os.sensor_lasttime == 0){
-    			
-    		}
+    		
     		//check if it is time for daily consumption log
-    		else if((curr_time - flow_log_last_time) > 60 
+    		if((curr_time - flow_log_last_time) > 60 
 					&& is_time(curr_time,FLOW_DAILY_LOG_HOUR,FLOW_DAILY_LOG_MINUTE)){
 				flow_log_last_time = curr_time;
 				//generate log/message
@@ -1185,7 +1179,7 @@ void push_message(byte type, uint32_t lval, float fval, const char* sval) {
 
       break;
 
-    case IFTTT_FLOWSENSOR:
+    case IFTTT_FLOWSENSOR://TODO - fix with samrt sensor reading 
       strcat_P(postval, PSTR("Flow count: "));
       itoa(lval, postval+strlen(postval), 10);
       strcat_P(postval, PSTR(", volume: "));
