@@ -834,17 +834,17 @@ void do_loop()
 				flow_satbilized_end_time = 0;
     			flow_gallons_count += (ulong)(flow_gallons_rt * 100);
     		}
-
-    		
-    		//check if it is time for daily consumption log
-    		if((curr_time - flow_log_last_time) > 60 
+    		if(os.sensor_lasttime == 0){
+				os.flowcount_log_start = flow_gallons_count;
+    			os.sensor_lasttime = curr_time;
+			}
+    		else if((curr_time - flow_log_last_time) > 60 //check if it is time for daily consumption log
 					&& is_time(curr_time,FLOW_DAILY_LOG_HOUR,FLOW_DAILY_LOG_MINUTE)){
 				flow_log_last_time = curr_time;
 				//generate log/message
     			write_log(LOGDATA_FLOWSENSE, curr_time);
     			push_message(IFTTT_FLOWSENSOR, (flow_gallons_count > os.flowcount_log_start)?(flow_gallons_count - os.flowcount_log_start) : 0);
     			//restart next day log
-    			os.sensor_lasttime = 0;
     			os.flowcount_log_start = flow_gallons_count;
     			os.sensor_lasttime = curr_time;
     		}
