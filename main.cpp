@@ -85,39 +85,29 @@ ulong restart_timeout = 0;
 OpenSprinkler os; // OpenSprinkler object
 ProgramData pd;   // ProgramdData object
 
+//flow globals 
 volatile ulong flow_count = 0;
 ulong flow_gallons_count = 0;
-float flow_offset = 0.2;
-float flow_k = 0.322;
 ulong flow_station_start_gallons = 0;
 float flow_station_gallons = 0;
+
 float flow_pulses_to_gpm(float pulsesPerSec){
-	// Formula FREQUENCY = (GPM / K) – Offset
-	// or GPM = K*(FREQUENCY + Offset)
+	//GPM = K*(FREQUENCY + Offset)
 	if(pulsesPerSec == 0) return 0;
-	return flow_k * (pulsesPerSec + flow_k);
+	return FLOW_SENSOR_K * (pulsesPerSec + FLOW_SENSOR_OFFSET);
 }
 
-int isTime(ulong time, int hours, int minutes){
-	int hr = (int) ((time / (1000 * 60 * 60)) % 24);
+int is_time(ulong timeSec, int hours, int minutes){
+	int hr = (int) ((timeSec / (60 * 60)) % 24);
 	if(hr == hours){
-		int min = (int) ((time / (1000 * 60)) % 60);
+		int min = (int) ((timeSec /60) % 60);
 		if(min == minutes){
 			return 1;
 		}
 	}
 	return 0;
 }
-/* ====== Robert Hillman (RAH)'s implementation of flow sensor ======
- * flow_begin - time when valve turns on
- * flow_start - time when flow starts being measured (i.e. 2 mins after flow_begin approx
- * flow_stop - time when valve turns off (last rising edge pulse detected before off)
- * flow_gallons - total # of gallons+1 from flow_start to flow_stop
- * flow_last_gpm - last flow rate measured (averaged over flow_gallons) from last valve stopped (used to write to log file).
-volatile ulong flow_begin, flow_start, flow_stop, flow_gallons;
-volatile ulong flow_count = 0;
-float flow_last_gpm=0;
- */
+
 /** Flow sensor interrupt service routine */
 #ifdef ESP8266
 ICACHE_RAM_ATTR void flow_isr() // for ESP8266, ISR must be marked ICACHE_RAM_ATTR
@@ -127,18 +117,9 @@ void flow_isr()
 {
   if(os.options[OPTION_SENSOR_TYPE]!=SENSOR_TYPE_FLOW) return;
   ulong curr = millis();
-  //DO NOT DEBOUNCE
-  //if(curr-os.flowcount_time_ms < 50) return;  // debounce threshold: 50ms
+  /**DO NOT DEBOUNCE  if(curr-os.flowcount_time_ms < 50) return;  // debounce threshold: 50ms */
   flow_count++;
   os.flowcount_time_ms = curr;
-
-  /* RAH implementation of flow sensor
-  *		if (flow_start==0) { flow_gallons=0; flow_start=curr;}  // if first pulse, record time
-  *		if ((curr-flow_start)<90000) { flow_gallons=0; } // wait 90 seconds before recording flow_begin
-  *		else {  if (flow_gallons==1)  {  flow_begin = curr;}}
-  *		flow_stop = curr; // get time in ms for stop
-  *		flow_gallons++;  // increment gallon count for each interrupt
-  /* End of RAH implementation of flow sensor */
 }
 
 #if defined(ARDUINO)
@@ -683,9 +664,8 @@ void do_loop()
 
               //turn_on_station(sid);
               os.set_station_bit(sid, 1);
-
-              // RAH implementation of flow sensor
-              //flow_start=0;
+              
+              //record gallons count when the station start for consumption logs
               flow_station_start_gallons = flow_gallons_count;
 
             } //if curr_time > scheduled_start_time
@@ -738,14 +718,6 @@ void do_loop()
         pd.reset_runtime();
         // reset program busy bit
         os.status.program_busy = 0;
-
-        /*LOG EVERY 24 HOURS - remove
-         * // log flow sensor reading if flow sensor is used
-        if(os.options[OPTION_SENSOR_TYPE]==SENSOR_TYPE_FLOW) {
-          write_log(LOGDATA_FLOWSENSE, curr_time);
-          push_message(IFTTT_FLOWSENSOR, (flow_count>os.flowcount_log_start)?(flow_count-os.flowcount_log_start):0);
-        }
-         */
 
         // in case some options have changed while executing the program
         os.status.mas = os.options[OPTION_MASTER_STATION]; // update master station
@@ -837,41 +809,50 @@ void do_loop()
     static ulong flowcount_rt_start = 0;
     static float flow_gpm_rt = 0;
     static float flow_gallons_rt = 0;
-    static int flowing = 0;
+    static int is_flowing = 0;
+    static ulong flow_log_last_time = 0;
     static ulong flow_satbilized_end_time = 0;
     if (os.options[OPTION_SENSOR_TYPE]==SENSOR_TYPE_FLOW) {
     	if (curr_time % FLOWCOUNT_RT_WINDOW == 0) {
-    		ulong prevFlowCount = os.flowcount_rt;
     		os.flowcount_rt = (flow_count > flowcount_rt_start) ? flow_count - flowcount_rt_start: 0;
+    		
+    		//in gallons count calculation ignore pulses in the start of a flow for FLOW_PRESSURE_STABILIZED_TIME
+    		if(flowcount_rt_start == flow_count){//not flowing
+    			is_flowing = 0;
+    		}else if(is_flowing == 0){//just started to flow
+    			is_flowing = 1;
+    			//set time to start counting gallons;
+    			flow_satbilized_end_time = curr_time + FLOW_PRESSURE_STABILIZED_TIME;
+    		}  		
+    		
     		flowcount_rt_start = flow_count;
     		//update real time gpm
-    		flow_gpm_rt = flow_pulses_to_gpm(flow_count / FLOWCOUNT_RT_WINDOW);
+    		flow_gpm_rt = flow_pulses_to_gpm(os.flowcount_rt / FLOWCOUNT_RT_WINDOW);
     		//update real time gallons
-    		flow_gallons_rt = flow_gpm_rt/60;
+    		flow_gallons_rt = (flow_gpm_rt/60) * FLOWCOUNT_RT_WINDOW;
 
-    		//in gallons count calculation ignore pulses in the start of a flow for FLOW_PRESSURE_STABILIZED_TIME
-    		if( (os.flowcount_rt - prevFlowCount) == 0){//not flowing
-    			flowing = 0;
-    		}else if(flowing = 0){//just started to flow
-    			flowing = 1;
-    			//set time to start counting gallons;
-    			flow_satbilized_end_time = (FLOW_PRESSURE_STABILIZED_TIME * 1000) + curr_time;
-    		}
+    		
     		//update real time gallons
-    		if(flow_satbilized_end_time <= curr_time){//if stabilization time passed
+    		if(is_flowing && flow_satbilized_end_time <= curr_time){//if stabilization time passed
+				flow_satbilized_end_time = 0;
     			flow_gallons_count += (ulong)(flow_gallons_rt * 100);
     		}
 
     		//re/start flow log if not started
     		if(os.sensor_lasttime == 0){
-    			os.flowcount_log_start = flow_gallons_count;
-    			os.sensor_lasttime = curr_time;
+    			
     		}
-    		else if(isTime(curr_time,23,59)){//generate and restart logging at the end of each day
+    		//check if it is time for daily consumption log
+    		else if((curr_time - flow_log_last_time) > 60 
+					&& is_time(curr_time,FLOW_DAILY_LOG_HOUR,FLOW_DAILY_LOG_MINUTE)){
+				flow_log_last_time = curr_time;
+				//generate log/message
     			write_log(LOGDATA_FLOWSENSE, curr_time);
     			push_message(IFTTT_FLOWSENSOR, (flow_gallons_count > os.flowcount_log_start)?(flow_gallons_count - os.flowcount_log_start) : 0);
-    			//reset for next log
+    			//restart next day log
     			os.sensor_lasttime = 0;
+    			os.flowcount_log_start = flow_gallons_count;
+    			os.sensor_lasttime = curr_time;
     		}
     	}
     }
@@ -945,11 +926,9 @@ void turn_off_station(byte sid, ulong curr_time) {
   byte qid = pd.station_qid[sid];
   // ignore if we are turning off a station that's not running or scheduled to run
   if (qid>=pd.nqueue)  return;
-
-  // RAH implementation of flow sensor
-  //if (flow_gallons>1) {flow_last_gpm = (float) 60000/(float)((flow_stop-flow_begin)/(flow_gallons-1));  }// RAH calculate GPM, 1 pulse per gallon
-  //else {flow_last_gpm = 0;}  // RAH if not one gallon (two pulses) measured then record 0 gpm
-  flow_station_gallons = (float)(flow_gallons_count - flow_station_start_gallons) / 100;
+   
+   //calculate gallons consumed during station run 
+  flow_station_gallons = (flow_gallons_count - flow_station_start_gallons) / 100.0;
 
   RuntimeQueueStruct *q = pd.queue+qid;
 
@@ -1058,12 +1037,6 @@ void schedule_all_stations(ulong curr_time) {
     DEBUG_PRINTLN(pd.nqueue);
     if (!os.status.program_busy) {
       os.status.program_busy = 1;  // set program busy bit
-     /* LOG FLOW every 24
-*      // start flow count
-*      if(os.options[OPTION_SENSOR_TYPE] == SENSOR_TYPE_FLOW) {  // if flow sensor is connected
-*        os.flowcount_log_start = flow_count;
-*        os.sensor_lasttime = curr_time;
-      }*/
     }
   }
 }
@@ -1183,10 +1156,8 @@ void push_message(byte type, uint32_t lval, float fval, const char* sval) {
       if(os.options[OPTION_SENSOR_TYPE]==SENSOR_TYPE_FLOW) {
         strcat_P(postval, PSTR(" Flow rate: "));
         #if defined(ARDUINO)
-        //dtostrf(flow_last_gpm,5,2,postval+strlen(postval));
         dtostrf(flow_station_gallons,5,2,postval+strlen(postval));
         #else
-        //sprintf(tmp_buffer+strlen(tmp_buffer), "%5.2f", flow_last_gpm);
         sprintf(tmp_buffer+strlen(tmp_buffer), "%5.2f", flow_station_gallons);
         #endif
       }
@@ -1460,10 +1431,16 @@ void write_log(byte type, ulong curr_time) {
     ulong lvalue;
     if(type==LOGDATA_FLOWSENSE) {
       lvalue = (flow_gallons_count>os.flowcount_log_start)?(flow_gallons_count-os.flowcount_log_start):0;
+      float fgal = lvalue/100.0;
+      #if defined(ARDUINO)
+      dtostrf(fgal,5,2,tmp_buffer+strlen(tmp_buffer));
+      #else
+      sprintf(tmp_buffer+strlen(tmp_buffer), "%5.2f", fgal);
+        #endif
     } else {
       lvalue = 0;
+      ultoa(lvalue, tmp_buffer+strlen(tmp_buffer), 10);
     }
-    ultoa(lvalue, tmp_buffer+strlen(tmp_buffer), 10);
     strcat_P(tmp_buffer, PSTR(",\""));
     strcat_P(tmp_buffer, log_type_names+type*3);
     strcat_P(tmp_buffer, PSTR("\","));
@@ -1485,14 +1462,12 @@ void write_log(byte type, ulong curr_time) {
   strcat_P(tmp_buffer, PSTR(","));
   ultoa(curr_time, tmp_buffer+strlen(tmp_buffer), 10);
   if((os.options[OPTION_SENSOR_TYPE]==SENSOR_TYPE_FLOW) && (type==LOGDATA_STATION)) {
-    // RAH implementation of flow sensor
+    // log gallons consumed 
     strcat_P(tmp_buffer, PSTR(","));
     #if defined(ARDUINO)
-    //dtostrf(flow_last_gpm,5,2,tmp_buffer+strlen(tmp_buffer));
     dtostrf(flow_station_gallons,5,2,tmp_buffer+strlen(tmp_buffer));
     #else
-    //sprintf(tmp_buffer+strlen(tmp_buffer), "%5.2f", flow_last_gpm);
-	sprintf(tmp_buffer+strlen(tmp_buffer), "%5.2f", flow_station_gallons);
+    sprintf(tmp_buffer+strlen(tmp_buffer), "%5.2f", flow_station_gallons);
     #endif
   }
   strcat_P(tmp_buffer, PSTR("]\r\n"));
