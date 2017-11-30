@@ -104,21 +104,26 @@ void flow_isr()
   os.flowcount_time_ms = curr;
 }
 
-float flow_pulses_to_gpm(float pulsesPerSec){
+inline float flow_pulses_to_gpm(float pulsesPerSec){
 	//GPM = K*(FREQUENCY + Offset)
 	if(pulsesPerSec == 0) return 0;
 	return FLOW_SENSOR_K * (pulsesPerSec + FLOW_SENSOR_OFFSET);
 }
 
-int is_time(ulong timeSec, int hours, int minutes){
+inline bool is_time(ulong timeSec, int hours, int minutes){
 	int hr = (int) ((timeSec / (60 * 60)) % 24);
 	if(hr == hours){
 		int min = (int) ((timeSec /60) % 60);
 		if(min == minutes){
-			return 1;
+			return true;
 		}
 	}
-	return 0;
+	return false;
+}
+
+inline bool addition_is_safe(ulong a, ulong b) {
+    if (( b > 0) && (a > ULONG_MAX - b)) return false;
+    return true;
 }
 
 #if defined(ARDUINO)
@@ -832,7 +837,15 @@ void do_loop()
     		//update real time gallons
     		if(is_flowing && flow_satbilized_end_time <= curr_time){//if stabilization time passed
 				flow_satbilized_end_time = 0;
-    			flow_gallons_count += (ulong)(flow_gallons_rt * 100);
+				ulong curr_gallons = (ulong)(flow_gallons_rt * 100);
+				if(addition_is_safe(flow_gallons_count, curr_gallons) == false){//prevent overflow
+					//rebase according the smallest count reference 
+					ulong minref = (os.flowcount_log_start < flow_station_start_gallons ? os.flowcount_log_start : flow_station_start_gallons);
+					flow_gallons_count = flow_gallons_count - minref;
+					flow_station_start_gallons = flow_station_start_gallons - minref;
+					os.flowcount_log_start = os.flowcount_log_start - minref;					
+				}
+				flow_gallons_count += curr_gallons;
     		}
     		if(os.sensor_lasttime == 0){
 				os.flowcount_log_start = flow_gallons_count;

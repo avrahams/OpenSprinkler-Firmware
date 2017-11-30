@@ -58,7 +58,7 @@
 
 /** Flow sensor */
 #define FLOW_DEBOUNCE_THRESHOLD 0
-#define FLOWCOUNT_RT_WINDOW   10 	 	  // flow count window (for computing real-time flow rate), 10 seconds
+#define FLOWCOUNT_RT_WINDOW   5 	 	  // flow count window (for computing real-time flow rate), 5 seconds
 #define FLOW_PRESSURE_STABILIZED_TIME 0  // flow stabilization time - time in seconds to pressure to stabilize, in this time flow pulses will be ignored
 #define FLOW_SENSOR_OFFSET 0.2 			  // flow sensor offset 
 #define FLOW_SENSOR_K 0.322    			  // flow sensor K factor 
