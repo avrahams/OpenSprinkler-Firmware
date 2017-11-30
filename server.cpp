@@ -1042,7 +1042,7 @@ void server_json_options_main() {
     if (oid==OPTION_BOOST_TIME) continue;
     #endif
 
-    //if (oid==OPTION_SEQUENTIAL_RETIRED) continue;
+    if (oid==OPTION_SEQUENTIAL_RETIRED) continue;
     if (oid==OPTION_DEVICE_ID && os.status.has_hwmac) continue; // do not send DEVICE ID if hardware MAC exists
    
 #if defined(ARDUINO)
@@ -1405,7 +1405,7 @@ void server_change_options()
     // skip options that cannot be set through /co command
     if (oid==OPTION_RESET || oid==OPTION_DEVICE_ENABLE ||
         oid==OPTION_FW_VERSION || oid==OPTION_HW_VERSION ||
-        oid==OPTION_FW_MINOR || //oid==OPTION_SEQUENTIAL_RETIRED ||
+        oid==OPTION_FW_MINOR || oid==OPTION_SEQUENTIAL_RETIRED ||
         oid==OPTION_REMOTE_EXT_MODE)
       continue;
     prev_value = os.options[oid];

@@ -104,17 +104,10 @@ void flow_isr()
   os.flowcount_time_ms = curr;
 }
 
-//flow sensor types
-#define FLOW_SENSOR_SUPPORTED_TYPES 3    //Diameter:  1"    1.5"   2"
-int sensorTypeK[FLOW_SENSOR_SUPPORTED_TYPES] =      {0.322, 0.65, 1.192};
-int sensorTypeOffset[FLOW_SENSOR_SUPPORTED_TYPES] = {0.2, 0.75, 0.94};
-
-//flow sensor pulses to gpm
 inline float flow_pulses_to_gpm(float pulsesPerSec){
-	if(pulsesPerSec == 0) return 0;
 	//GPM = K*(FREQUENCY + Offset)
-	byte sensor_type = (os.options[OPTION_FLOW_SENSOR_TYPE] <= FLOW_SENSOR_SUPPORTED_TYPES -1 ? OPTION_FLOW_SENSOR_TYPE : 0);
-	return sensorTypeK[sensor_type] * (pulsesPerSec + sensorTypeOffset[sensor_type]);
+	if(pulsesPerSec == 0) return 0;
+	return FLOW_SENSOR_K * (pulsesPerSec + FLOW_SENSOR_OFFSET);
 }
 
 inline bool is_time(ulong timeSec, int hours, int minutes){
@@ -1380,8 +1373,8 @@ static const char log_type_names[] PROGMEM =
 
 /** write run record to log on SD card */
 void write_log(byte type, ulong curr_time) {
-  //FORCE LOGS
-  //if (!os.options[OPTION_ENABLE_LOGGING]) return;
+
+  if (!os.options[OPTION_ENABLE_LOGGING]) return;
 
   // file name will be logs/xxxxx.tx where xxxxx is the day in epoch time
   ultoa(curr_time / 86400, tmp_buffer, 10);
