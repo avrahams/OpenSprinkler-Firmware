@@ -104,10 +104,21 @@ void flow_isr()
   os.flowcount_time_ms = curr;
 }
 
+//flow sensor types
+#define FLOW_SENSOR_SUPPORTED_TYPES 3      //Diameter:  1"    1.5"   2"
+float sensorTypeK[FLOW_SENSOR_SUPPORTED_TYPES] =      {0.322, 0.65, 1.192};
+float sensorTypeOffset[FLOW_SENSOR_SUPPORTED_TYPES] = {0.2, 0.75, 0.94};
+
+//flow sensor pulses to gpm
+//workaround - use OPTION_PULSE_RATE_1/2 to indicate which sensor type is used
 inline float flow_pulses_to_gpm(float pulsesPerSec){
-	//GPM = K*(FREQUENCY + Offset)
 	if(pulsesPerSec == 0) return 0;
-	return FLOW_SENSOR_K * (pulsesPerSec + FLOW_SENSOR_OFFSET);
+	//GPM = K*(FREQUENCY + Offset)
+	uint32_t sensor_type = os.options[OPTION_PULSE_RATE_1];
+    sensor_type = (sensor_type<<8)+os.options[OPTION_PULSE_RATE_0];
+    sensor_type = sensor_type/100;
+	sensor_type = (sensor_type > 0) && (sensor_type <= FLOW_SENSOR_SUPPORTED_TYPES) ? sensor_type - 1 : 0;
+	return sensorTypeK[sensor_type] * (pulsesPerSec + sensorTypeOffset[sensor_type]);
 }
 
 inline bool is_time(ulong timeSec, int hours, int minutes){
