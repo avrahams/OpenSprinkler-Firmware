@@ -2033,7 +2033,7 @@ void OpenSprinkler::ui_set_options(int oid)
         else  {
           i = (i+1) % NUM_OPTIONS;
         }
-        if(i==OPTION_SEQUENTIAL_RETIRED) i++;
+        //if(i==OPTION_SEQUENTIAL_RETIRED) i++;
         #if defined(__AVR_ATmega1284P__) || defined(__AVR_ATmega1284__) || defined(ESP8266)
         else if (hw_type==HW_TYPE_AC && i==OPTION_BOOST_TIME) i++;  // skip boost time for non-DC controller
         #ifdef ESP8266
