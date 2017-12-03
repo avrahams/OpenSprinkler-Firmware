@@ -104,10 +104,11 @@ void flow_isr()
   os.flowcount_time_ms = curr;
 }
 
-//flow sensor types
-#define FLOW_SENSOR_SUPPORTED_TYPES 3      //Diameter:  1"    1.5"   2"
-float sensorTypeK[FLOW_SENSOR_SUPPORTED_TYPES] =      {0.322, 0.65, 1.192};
-float sensorTypeOffset[FLOW_SENSOR_SUPPORTED_TYPES] = {0.2, 0.75, 0.94};
+
+//flow sensor types                                   1-CST		     2-CST		   3-CST			4-TORO		  5-TORO		6-TORO		7-TORO        8-TORO        9-TORO    10-TORO
+#define FLOW_SENSOR_SUPPORTED_TYPES 10      //Model:   FSI-T10-001    FSI-T15-001   FSI-T20-001		TFS-050		  TFS-075		TFS-100		TFS-150		  TFS-200		TFS-300   TFS-400 
+float sensorTypeK[FLOW_SENSOR_SUPPORTED_TYPES] =      {0.322,        0.65,         1.192, 			0.07800,      0.15630,      0.26112,    1.69900,      2.84290,      8.30900,  13.74283};
+float sensorTypeOffset[FLOW_SENSOR_SUPPORTED_TYPES] = {0.2,          0.75,         0.94, 			0.9,      	  0.9,          1.2,    	-0.31600,     0.14350,      0.22700,  0.23707 };
 
 //flow sensor pulses to gpm
 //workaround - use OPTION_PULSE_RATE_1/2 to indicate which sensor type is used
@@ -118,7 +119,8 @@ inline float flow_pulses_to_gpm(float pulsesPerSec){
     sensor_type = (sensor_type<<8)+os.options[OPTION_PULSE_RATE_0];
     sensor_type = sensor_type/100;
 	sensor_type = (sensor_type > 0) && (sensor_type <= FLOW_SENSOR_SUPPORTED_TYPES) ? sensor_type - 1 : 0;
-	return sensorTypeK[sensor_type] * (pulsesPerSec + sensorTypeOffset[sensor_type]);
+	float gpm = sensorTypeK[sensor_type] * (pulsesPerSec + sensorTypeOffset[sensor_type]);
+	return gpm > 0 ? gpm : 0;
 }
 
 inline bool is_time(ulong timeSec, int hours, int minutes){
