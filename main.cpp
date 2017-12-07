@@ -1387,7 +1387,7 @@ static const char log_type_names[] PROGMEM =
 /** write run record to log on SD card */
 void write_log(byte type, ulong curr_time) {
 
-  if (!os.options[OPTION_ENABLE_LOGGING]) return;
+  //Force logging  /*if (!os.options[OPTION_ENABLE_LOGGING]) return;*/
 
   // file name will be logs/xxxxx.tx where xxxxx is the day in epoch time
   ultoa(curr_time / 86400, tmp_buffer, 10);
