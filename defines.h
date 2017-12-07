@@ -35,7 +35,11 @@
                             // if this number is different from the one stored in non-volatile memory
                             // a device reset will be automatically triggered
 
-#define OS_FW_MINOR      1  // Firmware minor version
+#define OS_FW_MINOR      5  // Firmware minor version
+
+
+/***IoT Service auth key - repleace with real token */
+#define IOT_SERVICE_TOKEN  "iot_service_token" 
 
 /** Hardware version base numbers */
 #define OS_HW_VERSION_BASE   0x00

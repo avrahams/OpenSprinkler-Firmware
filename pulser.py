@@ -1,6 +1,14 @@
 #!/usr/bin/python
 #######
-# This program would generate Squence pulse train on GPIO 14 Pin 26 of P1
+# GPM - FREQ for default model 
+#GPM     Freq
+#5.216   16
+#7.148   22
+#10.368  32
+#15.198  47
+#20.35	63
+#30.334	94
+
 #######
 import RPi.GPIO as GPIO
 from time import sleep
@@ -8,7 +16,7 @@ import sys
 import signal
 import time
 
-pulses_per_sec = 25
+pulses_per_sec = 8
 rate = 1.0/pulses_per_sec
 print(rate)
 
