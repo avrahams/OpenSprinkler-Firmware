@@ -123,15 +123,24 @@ inline float flow_pulses_to_gpm(float pulsesPerSec){
 	return gpm > 0 ? gpm : 0;
 }
 
-inline bool is_time(ulong timeSec, int hours, int minutes){
+inline bool is_hour(ulong timeSec, int hours){
 	int hr = (int) ((timeSec / (60 * 60)) % 24);
 	if(hr == hours){
-		int min = (int) ((timeSec /60) % 60);
-		if(min == minutes){
-			return true;
-		}
+		return true;
 	}
 	return false;
+}
+
+inline bool is_minute(ulong timeSec,int minutes){
+	int min = (int) ((timeSec /60) % 60);
+	if(min == minutes){
+		return true;
+	}
+	return false;
+}
+
+inline bool is_time(ulong timeSec, int hours, int minutes){
+	return (is_minute(timeSec, minutes) && is_hour(timeSec, hours));
 }
 
 inline bool addition_is_safe(ulong a, ulong b) {
@@ -864,8 +873,10 @@ void do_loop()
 				os.flowcount_log_start = flow_gallons_count;
     			os.sensor_lasttime = curr_time;
 			}
-    		else if((curr_time - flow_log_last_time) > 60 //check if it is time for daily consumption log
-					&& is_time(curr_time,FLOW_DAILY_LOG_HOUR,FLOW_DAILY_LOG_MINUTE)){
+    		else if((curr_time - flow_log_last_time) > 60 &&//check if 60 seconds passed since last log 
+					(is_time(curr_time,FLOW_DAILY_LOG_HOUR,FLOW_DAILY_LOG_MINUTE) //is time for daily consumption log
+					||  (is_minute(curr_time, FLOW_DAILY_LOG_MINUTE) && (flow_gallons_count > os.flowcount_log_start) )))  //or is time for hourly consumption log - if has gallons to log 
+			{
 				flow_log_last_time = curr_time;
 				//generate log/message
     			write_log(LOGDATA_FLOWSENSE, curr_time);
