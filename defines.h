@@ -40,7 +40,6 @@
 
 /***IoT Service auth key - replace with real token */
 #define IOT_SERVICE_TOKEN  "iot_service_token" 
-
 /** Hardware version base numbers */
 #define OS_HW_VERSION_BASE   0x00
 #define OSPI_HW_VERSION_BASE 0x40
