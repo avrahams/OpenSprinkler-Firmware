@@ -104,7 +104,7 @@ void flow_isr()
   os.flowcount_time_ms = curr;
 }
 
-
+#ifdef THREE_WIRES_FLOW_METER
 //flow sensor types                                   1-CST		     2-CST		   3-CST			4-TORO		  5-TORO		6-TORO		7-TORO        8-TORO        9-TORO    10-TORO
 #define FLOW_SENSOR_SUPPORTED_TYPES 10      //Model:   FSI-T10-001    FSI-T15-001   FSI-T20-001		TFS-050		  TFS-075		TFS-100		TFS-150		  TFS-200		TFS-300   TFS-400 
 float sensorTypeK[FLOW_SENSOR_SUPPORTED_TYPES] =      {0.322,        0.65,         1.192, 			0.07800,      0.15630,      0.26112,    1.69900,      2.84290,      8.30900,  13.74283};
@@ -122,6 +122,7 @@ inline float flow_pulses_to_gpm(float pulsesPerSec){
 	float gpm = sensorTypeK[sensor_type] * (pulsesPerSec + sensorTypeOffset[sensor_type]);
 	return gpm > 0 ? gpm : 0;
 }
+#endif //THREE_WIRES_FLOW_METER
 
 inline bool is_hour(ulong timeSec, int hours){
 	int hr = (int) ((timeSec / (60 * 60)) % 24);
@@ -864,16 +865,22 @@ void do_loop()
     		}  		
     		
     		flowcount_rt_start = flow_count;
+            #ifdef THREE_WIRES_FLOW_METER
     		//update real time gpm
     		float flow_gpm_rt = flow_pulses_to_gpm(os.flowcount_rt / FLOWCOUNT_RT_WINDOW);
     		//update real time gallons
     		float flow_gallons_rt = (flow_gpm_rt/60) * FLOWCOUNT_RT_WINDOW;
+    		#endif //THREE_WIRES_FLOW_METER
 
     		
     		//update real time gallons
     		if(is_flowing && flow_satbilized_end_time <= curr_time){//if stabilization time passed
 				flow_satbilized_end_time = 0;
+				#ifdef THREE_WIRES_FLOW_METER
 				ulong curr_gallons = (ulong)(flow_gallons_rt * 100);
+				#else
+				ulong curr_gallons = os.flowcount_rt * 100;
+				#endif
 				if(addition_is_safe(flow_gallons_count, curr_gallons) == false){//prevent overflow
 					//rebase according the smallest count reference 
 					ulong minref = (os.flowcount_log_start < flow_station_start_gallons ? os.flowcount_log_start : flow_station_start_gallons);
@@ -883,6 +890,7 @@ void do_loop()
 				}
 				flow_gallons_count += curr_gallons;
     		}
+    		
     		if(os.sensor_lasttime == 0){
 				os.flowcount_log_start = flow_gallons_count;
     			os.sensor_lasttime = curr_time;

@@ -60,8 +60,9 @@
 #define STATION_SPECIAL_DATA_SIZE  (TMP_BUFFER_SIZE - 8)
 
 /** Flow sensor */
+//#define THREE_WIRES_FLOW_METER      //uncomment to support 3 wire flow sensors 
 #define FLOW_DEBOUNCE_THRESHOLD 0
-#define FLOWCOUNT_RT_WINDOW   5 	 	  // flow count window (for computing real-time flow rate), 5 seconds
+#define FLOWCOUNT_RT_WINDOW   30 	 	  // flow count window (for computing real-time flow rate), 5 seconds
 #define FLOW_PRESSURE_STABILIZED_TIME 0  // flow stabilization time - time in seconds to pressure to stabilize, in this time flow pulses will be ignored
 #define FLOW_DAILY_LOG_HOUR 23  	      // daily consumption log hour
 #define FLOW_DAILY_LOG_MINUTE 59          // daily consumption * hourly backup log minute
