@@ -879,7 +879,7 @@ void do_loop()
 				#ifdef THREE_WIRES_FLOW_METER
 				ulong curr_gallons = (ulong)(flow_gallons_rt * 100);
 				#else
-				ulong curr_gallons = os.flowcount_rt * 100;
+				ulong curr_gallons = os.flowcount_rt;
 				#endif
 				if(addition_is_safe(flow_gallons_count, curr_gallons) == false){//prevent overflow
 					//rebase according the smallest count reference 
@@ -903,7 +903,7 @@ void do_loop()
 				//generate log/message
     			write_log(LOGDATA_FLOWSENSE, curr_time);
     			push_message(IFTTT_FLOWSENSOR, (flow_gallons_count > os.flowcount_log_start)?(flow_gallons_count - os.flowcount_log_start) : 0);
-    			//restart next day log
+    			//reset for next log
     			os.flowcount_log_start = flow_gallons_count;
     			os.sensor_lasttime = curr_time;
     		}
@@ -984,7 +984,11 @@ void turn_off_station(byte sid, ulong curr_time) {
   if (qid>=pd.nqueue)  return;
    
    //calculate gallons consumed during station run 
-  flow_station_gallons = (flow_gallons_count - flow_station_start_gallons) / 100.0;
+  flow_station_gallons = (flow_gallons_count - flow_station_start_gallons);
+#ifdef THREE_WIRES_FLOW_METER
+  flow_station_gallons = flow_station_gallons / 100.0;
+#endif
+
 
   RuntimeQueueStruct *q = pd.queue+qid;
 
@@ -1241,7 +1245,7 @@ void push_message(byte type, uint32_t lval, float fval, const char* sval) {
 
       break;
 
-    case IFTTT_FLOWSENSOR://TODO - fix with samrt sensor reading 
+    case IFTTT_FLOWSENSOR://TODO - fix with smart sensor reading
       strcat_P(postval, PSTR("Flow count: "));
       itoa(lval, postval+strlen(postval), 10);
       strcat_P(postval, PSTR(", volume: "));
@@ -1487,7 +1491,10 @@ void write_log(byte type, ulong curr_time) {
     ulong lvalue;
     if(type==LOGDATA_FLOWSENSE) {
       lvalue = (flow_gallons_count>os.flowcount_log_start)?(flow_gallons_count-os.flowcount_log_start):0;
-      float fgal = lvalue/100.0;
+      float fgal = lvalue*1.0;
+#ifdef THREE_WIRES_FLOW_METER
+      fgal = fgal/100.0;
+#endif
       #if defined(ARDUINO)
       dtostrf(fgal,5,2,tmp_buffer+strlen(tmp_buffer));
       #else
