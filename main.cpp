@@ -247,7 +247,7 @@ void ui_state_machine() {
           ultoa(flow_count, tmp_buffer, 10);
           os.lcd.print(tmp_buffer);
           os.lcd.setCursor(0, 1);
-          os.lcd_print_pgm(PSTR("(Pulses count)"))
+          os.lcd_print_pgm(PSTR("(Pulses count)"));
           ui_state = UI_STATE_DISP_IP;          
         } else {  // if no other button is clicked, reboot 
           os.reboot_dev();
