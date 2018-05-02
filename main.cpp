@@ -238,33 +238,36 @@ void ui_state_machine() {
           os.lcd.setCursor(0, 1);
           os.lcd_print_pgm(PSTR("(eip)"));
           ui_state = UI_STATE_DISP_IP;
-        } else if (digitalReadExt(PIN_BUTTON_3)==0) {  // if B3 is pressed while holding B2, display pulses count (was last successful weather call)
+        } else if (digitalReadExt(PIN_BUTTON_3)==0) {// clicking B3: display MAC
+#ifdef ESP8266
+        	os.lcd.clear(0, 1);
+        	byte mac[6];
+        	WiFi.macAddress(mac);
+        	os.lcd_print_mac(mac);
+#else
+        	os.lcd.clear();
+        	os.lcd_print_mac(ether.mymac);
+#endif
+        	ui_state = UI_STATE_DISP_GW;
+        	// if B3 is pressed while holding B2, display pulses count (was last successful weather call)
           /*os.lcd.clear(0, 1);
           os.lcd_print_time(os.checkwt_success_lasttime);
           os.lcd.setCursor(0, 1);
           os.lcd_print_pgm(PSTR("(lswc)"));*/
-          //show pluses count
-          os.lcd.clear(0, 1);
-          os.lcd.setCursor(0, 1);
-          os.lcd_print_pgm(PSTR("(Pulses count)"));
-          ultoa(flow_count, tmp_buffer, 10);
-          os.lcd.setCursor(0, 2);
-          os.lcd.print(tmp_buffer);          
-          ui_state = UI_STATE_DISP_IP;          
+
+
         } else {  // if no other button is clicked, reboot 
           os.reboot_dev();
         }
-      } else {  // clicking B2: display MAC
-        #ifdef ESP8266
-        os.lcd.clear(0, 1);
-        byte mac[6];
-        WiFi.macAddress(mac);
-        os.lcd_print_mac(mac);
-        #else
-        os.lcd.clear();
-        os.lcd_print_mac(ether.mymac);
-        #endif
-        ui_state = UI_STATE_DISP_GW;
+      } else {   // clicking B2: display pulses count (was show mac address)
+    	  os.lcd.clear(0, 1);
+    	  os.lcd.setCursor(0, 1);
+    	  os.lcd_print_pgm(PSTR("(Pulses count)"));
+    	  ultoa(flow_count, tmp_buffer, 10);
+    	  os.lcd.setCursor(0, 2);
+    	  os.lcd.print(tmp_buffer);
+    	  ui_state = UI_STATE_DISP_IP;
+
       }
       break;
     case BUTTON_3:
