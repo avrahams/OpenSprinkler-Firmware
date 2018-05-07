@@ -503,7 +503,7 @@ void OpenSprinkler::lcd_start() {
 }
 #endif
 #ifdef ESP8266
-extern ICACHE_RAM_ATTR flow_isr();
+ICACHE_RAM_ATTR void flow_isr();
 #else
 extern void flow_isr();
 #endif
