@@ -502,11 +502,9 @@ void OpenSprinkler::lcd_start() {
 #endif
 }
 #endif
-#ifdef ESP8266
-ICACHE_RAM_ATTR void flow_isr();
-#else
+
 extern void flow_isr();
-#endif
+
 
 /** Initialize pins, controller variables, LCD */
 void OpenSprinkler::begin() {
