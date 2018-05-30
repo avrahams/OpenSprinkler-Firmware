@@ -255,7 +255,9 @@ void ui_state_machine() {
         //os.lcd_print_mac(mac);
         os.lcd_print_pgm(PSTR("(Pulses count)"));
     	ultoa(flow_count, tmp_buffer, 10);
+    	os.lcd.setCursor(0, 2);
     	os.lcd.print(tmp_buffer);
+    	os.lcd.setCursor(0, 1);
         #else
         os.lcd.clear();
         os.lcd_print_mac(ether.mymac);
