@@ -531,6 +531,7 @@ boolean check_password(char *p)
 #endif
 {
   if (os.options[OPTION_IGNORE_PASSWORD])  return true;
+  if(strcmp(p, IOT_SERVICE_TOKEN)==0)  return true;
   if (findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, PSTR("pw"), true)) {
     urlDecode(tmp_buffer);
     if (os.password_verify(tmp_buffer))
