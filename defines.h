@@ -131,7 +131,7 @@ typedef unsigned long ulong;
 
   #if defined(__AVR_ATmega1284P__) || defined(__AVR_ATmega1284__) // for 4KB NVM
 
-    #define MAX_EXT_BOARDS    6  // maximum number of exp. boards (each expands 8 stations)
+    #define MAX_EXT_BOARDS    8  // maximum number of exp. boards (each expands 8 stations)
     #define MAX_NUM_STATIONS  ((1+MAX_EXT_BOARDS)*8)  // maximum number of stations
 
     #define NVM_SIZE            4096  // For AVR, nvm data is stored in EEPROM, ATmega1284 has 4K EEPROM
