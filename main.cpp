@@ -76,6 +76,10 @@ void httpget_callback(byte, uint16_t, uint16_t);
 
 extern char tmp_buffer[];       // scratch buffer
 
+volatile unsigned long intr_time = 0;
+const unsigned long debounce_period = 10; // milli-seconds. Change as appropriate.
+volatile bool debounce_in_progress = false;
+
 #ifdef ESP8266
 ESP8266WebServer *wifi_server = NULL;
 static uint16_t led_blink_ms = LED_FAST_BLINK;
@@ -98,11 +102,32 @@ void flow_isr()
 #endif
 {
   if(os.options[OPTION_SENSOR_TYPE]!=SENSOR_TYPE_FLOW) return;
+#if 0  
   ulong curr = millis();
   if(curr-os.flowcount_time_ms < FLOW_DEBOUNCE_THRESHOLD) return;  // debounce rate smaller then FLOW_DEBOUNCE_THRESHOLD */
   flow_count++;
   os.flowcount_time_ms = curr;
+#endif
+ 
+  if (debounce_in_progress == false) {
+    intr_time = millis();
+    debounce_in_progress = true;
+  }    
 }
+
+void update_pulse_count() {
+  if (debounce_in_progress ==  true) {
+    while ((millis()-intr_time) <= debounce_period){
+      if (digitalRead(PIN_FLOWSENSOR) != LOW) {
+        debounce_in_progress = false;   // Bad pulse, don't count it.
+        return; 
+      }      
+    }    
+    flow_count++;     // Good pulse, count it.
+    debounce_in_progress = false;   // ready to receive the next one.    
+  }  
+}
+
 
 #ifdef THREE_WIRES_FLOW_METER
 //flow sensor types                                   1-CST		     2-CST		   3-CST			4-TORO		  5-TORO		6-TORO		7-TORO        8-TORO        9-TORO    10-TORO
@@ -238,33 +263,36 @@ void ui_state_machine() {
           os.lcd.setCursor(0, 1);
           os.lcd_print_pgm(PSTR("(eip)"));
           ui_state = UI_STATE_DISP_IP;
-        } else if (digitalReadExt(PIN_BUTTON_3)==0) {  // if B3 is pressed while holding B2, display pulses count (was last successful weather call)
+        } else if (digitalReadExt(PIN_BUTTON_3)==0) {// clicking B3: display MAC
+#ifdef ESP8266
+        	os.lcd.clear(0, 1);
+        	byte mac[6];
+        	WiFi.macAddress(mac);
+        	os.lcd_print_mac(mac);
+#else
+        	os.lcd.clear();
+        	os.lcd_print_mac(ether.mymac);
+#endif
+        	ui_state = UI_STATE_DISP_GW;
+        	// if B3 is pressed while holding B2, display pulses count (was last successful weather call)
           /*os.lcd.clear(0, 1);
           os.lcd_print_time(os.checkwt_success_lasttime);
           os.lcd.setCursor(0, 1);
           os.lcd_print_pgm(PSTR("(lswc)"));*/
-          //show pluses count
-          os.lcd.clear(0, 1);
-          os.lcd.setCursor(0, 1);
-          os.lcd_print_pgm(PSTR("(Pulses count)"));
-          ultoa(flow_count, tmp_buffer, 10);
-          os.lcd.setCursor(0, 2);
-          os.lcd.print(tmp_buffer);          
-          ui_state = UI_STATE_DISP_IP;          
+
+
         } else {  // if no other button is clicked, reboot 
           os.reboot_dev();
         }
-      } else {  // clicking B2: display MAC
-        #ifdef ESP8266
-        os.lcd.clear(0, 1);
-        byte mac[6];
-        WiFi.macAddress(mac);
-        os.lcd_print_mac(mac);
-        #else
-        os.lcd.clear();
-        os.lcd_print_mac(ether.mymac);
-        #endif
-        ui_state = UI_STATE_DISP_GW;
+      } else {   // clicking B2: display pulses count (was show mac address)
+    	  os.lcd.clear(0, 1);
+    	  os.lcd.setCursor(0, 1);
+    	  os.lcd_print_pgm(PSTR("(Pulses count)"));
+    	  ultoa(flow_count, tmp_buffer, 10);
+    	  os.lcd.setCursor(0, 2);
+    	  os.lcd.print(tmp_buffer);
+    	  ui_state = UI_STATE_DISP_IP;
+
       }
       break;
     case BUTTON_3:
@@ -439,6 +467,9 @@ void do_loop()
   // ====== Process Ethernet packets ======
 #if defined(ARDUINO)  // Process Ethernet packets for Arduino
   #ifdef ESP8266
+  
+    update_pulse_count();
+  
   static ulong connecting_timeout;
   switch(os.state) {
   case OS_STATE_INITIAL:
