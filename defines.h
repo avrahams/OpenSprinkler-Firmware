@@ -128,7 +128,7 @@
 
   #if defined(__AVR_ATmega1284P__) || defined(__AVR_ATmega1284__) // for 4KB NVM
 
-    #define MAX_EXT_BOARDS    6  // maximum number of exp. boards (each expands 8 stations)
+    #define MAX_EXT_BOARDS    2  // maximum number of exp. boards (each expands 8 stations)
     #define MAX_NUM_STATIONS  ((1+MAX_EXT_BOARDS)*8)  // maximum number of stations
 
     #define NVM_SIZE            4096  // For AVR, nvm data is stored in EEPROM, ATmega1284 has 4K EEPROM
@@ -144,7 +144,7 @@
 
   #else
 
-    #define MAX_EXT_BOARDS    5  // maximum number of exp. boards (each expands 8 stations)
+    #define MAX_EXT_BOARDS    2  // maximum number of exp. boards (each expands 8 stations)
     #define MAX_NUM_STATIONS  ((1+MAX_EXT_BOARDS)*8)  // maximum number of stations
 
     #define NVM_SIZE            2048  // For AVR, nvm data is stored in EEPROM, ATmega644 has 2K EEPROM
@@ -166,7 +166,7 @@
   // But they can be increased if needed
   #define NVM_FILENAME        "nvm.dat" // for RPI/BBB, nvm data is stored in a file
 
-  #define MAX_EXT_BOARDS    6  // maximum number of exp. boards (each expands 8 stations)
+  #define MAX_EXT_BOARDS    2  // maximum number of exp. boards (each expands 8 stations)
   #define MAX_NUM_STATIONS  ((1+MAX_EXT_BOARDS)*8)  // maximum number of stations
 
   #define NVM_SIZE            4096
